@@ -2,22 +2,14 @@ package protocol.message;
 
 import java.util.List;
 
-public class RERR extends Message{
-
-    private byte flag;
-    private byte hopAddress;
-    private byte sourceAddress;
+public class RERR extends Message {
     private byte pathCount;
-    private List<Byte> destinationAddress;
+    private List<Byte> destinationAddresses;
 
-    public RERR(byte type, String destinationAddress, byte flag, byte hopAddress, byte sourceAddress,
-                byte pathCount, List<Byte> destinationAddress1) {
-        super(type, destinationAddress);
-        this.flag = flag;
-        this.hopAddress = hopAddress;
-        this.sourceAddress = sourceAddress;
+    public RERR(byte type, byte flags, byte hopAddress, byte prevHopAddress, byte pathCount, List<Byte> destinationAddresses) {
+        super(type, flags, hopAddress, prevHopAddress);
         this.pathCount = pathCount;
-        this.destinationAddress = destinationAddress1;
+        this.destinationAddresses = destinationAddresses;
     }
 
     @Override

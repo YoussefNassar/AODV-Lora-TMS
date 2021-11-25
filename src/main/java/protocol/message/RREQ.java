@@ -1,28 +1,22 @@
 package protocol.message;
 
 public class RREQ extends Message{
-
-    private byte flag;
-    private byte hopAddress;
-    private byte sourceAddress;
+    private byte requestId;
+    private byte destinationAddress;
+    private byte destinationSequence;
     private byte hopCount;
-    private byte sequenceNumber;
-    private byte DestinationSequenceNumber;
-    private byte RequestId;
-    private byte TTL;
+    private byte originatorAddress;
+    private byte originatorSequence;
 
-
-    public RREQ(byte type, String destinationAddress, byte flag, byte hopAddress, byte sourceAddress,
-                byte hopCount, byte sequenceNumber, byte destinationSequenceNumber, byte requestId, byte TTL) {
-        super(type, destinationAddress);
-        this.flag = flag;
-        this.hopAddress = hopAddress;
-        this.sourceAddress = sourceAddress;
+    public RREQ(byte type, byte flags, byte hopAddress, byte prevHopAddress, byte requestId, byte destinationAddress,
+                byte destinationSequence, byte hopCount, byte originatorAddress, byte originatorSequence) {
+        super(type, flags, hopAddress, prevHopAddress);
+        this.requestId = requestId;
+        this.destinationAddress = destinationAddress;
+        this.destinationSequence = destinationSequence;
         this.hopCount = hopCount;
-        this.sequenceNumber = sequenceNumber;
-        DestinationSequenceNumber = destinationSequenceNumber;
-        RequestId = requestId;
-        this.TTL = TTL;
+        this.originatorAddress = originatorAddress;
+        this.originatorSequence = originatorSequence;
     }
 
     @Override

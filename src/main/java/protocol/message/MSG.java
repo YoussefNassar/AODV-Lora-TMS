@@ -1,17 +1,17 @@
 package protocol.message;
 
 public class MSG extends Message{
-
-    private byte hopAddress;
+    private byte destinationAddress;
+    private byte originatorAddress;
     private byte hopCount;
-    private byte sequenceNumber;
     private byte text;
 
-    public MSG(byte type, String destinationAddress, byte hopAddress, byte hopCount, byte sequenceNumber, byte text) {
-        super(type, destinationAddress);
-        this.hopAddress = hopAddress;
+    public MSG(byte type, byte flags, byte hopAddress, byte prevHopAddress, byte destinationAddress,
+               byte originatorAddress, byte hopCount, byte text) {
+        super(type, flags, hopAddress, prevHopAddress);
+        this.destinationAddress = destinationAddress;
+        this.originatorAddress = originatorAddress;
         this.hopCount = hopCount;
-        this.sequenceNumber = sequenceNumber;
         this.text = text;
     }
 
