@@ -1,3 +1,5 @@
+import lora.LoraController;
+
 import java.io.IOException;
 import java.util.Scanner;
 
@@ -13,11 +15,13 @@ public class Main {
         while (true) {
             System.out.println("enter your command: ");
             Scanner scanner = new Scanner(System.in);
-            String command = scanner.nextLine();
-            command = command.toUpperCase();
+            //String command = scanner.nextLine();
+            //command = command.toUpperCase();
 
-            CommandHandler commandHandler = new CommandHandler();
-            commandHandler.sendRestSignal(command);
+            LoraController loraController = new LoraController();
+            loraController.setUpCommunication();
+            //loraController.setUpTheModule();
+            loraController.testConnectionInLab();
         }
     }
 
