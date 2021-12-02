@@ -1,32 +1,22 @@
 package protocol.message;
 
 public abstract class Message {
-    private byte type;
-    private byte flags;
+    private byte type_flags;
     private byte hopAddress;
     private byte prevHopAddress;
 
-    public Message(byte type, byte flags, byte hopAddress, byte prevHopAddress) {
-        this.type = type;
-        this.flags = flags;
+    public Message(byte type_flags, byte hopAddress, byte prevHopAddress) {
+        this.type_flags = type_flags;
         this.hopAddress = hopAddress;
         this.prevHopAddress = prevHopAddress;
     }
 
-    public byte getType() {
-        return type;
+    public byte getType_flags() {
+        return type_flags;
     }
 
-    public void setType(byte type) {
-        this.type = type;
-    }
-
-    public byte getFlags() {
-        return flags;
-    }
-
-    public void setFlags(byte flags) {
-        this.flags = flags;
+    public void setType_flags(byte type_flags) {
+        this.type_flags = type_flags;
     }
 
     public byte getHopAddress() {

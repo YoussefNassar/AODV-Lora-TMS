@@ -1,6 +1,6 @@
 package protocol.message;
 
-public class RREP extends Message{
+public class RREP extends Message {
     private byte requestId;
     private byte destinationAddress;
     private byte destinationSequence;
@@ -8,9 +8,9 @@ public class RREP extends Message{
     private byte originatorAddress;
     private byte TTL;
 
-    public RREP(byte type, byte flags, byte hopAddress, byte prevHopAddress, byte requestId, byte destinationAddress,
+    public RREP(byte type_flags, byte hopAddress, byte prevHopAddress, byte requestId, byte destinationAddress,
                 byte destinationSequence, byte hopCount, byte originatorAddress, byte TTL) {
-        super(type, flags, hopAddress, prevHopAddress);
+        super(type_flags, hopAddress, prevHopAddress);
         this.requestId = requestId;
         this.destinationAddress = destinationAddress;
         this.destinationSequence = destinationSequence;
@@ -21,6 +21,7 @@ public class RREP extends Message{
 
     @Override
     public byte[] toMessage() {
-        return new byte[0];
+        return new byte[]{getType_flags(), getHopAddress(), getPrevHopAddress(), requestId, destinationAddress
+                , destinationSequence, hopCount, originatorAddress, TTL};
     }
 }
