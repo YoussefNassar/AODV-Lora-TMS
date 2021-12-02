@@ -60,6 +60,53 @@ public class LoraController {
 
     }
 
+    public void setUpTheModule() throws InterruptedException {
+        atSendAt();
+        //atRST();
+        //atSetConfiguration();
+    }
+
+    private void atSendAt() throws InterruptedException {
+        String reset = LoraCommand.AT.CODE;
+        String command = reset + "\r\n";
+        this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK);
+    }
+
+    private void atRST() throws InterruptedException {
+        String reset = LoraCommand.AT_RST.CODE;
+        String command = reset + "\r\n";
+        sendCommandAndCheckReply(command, LoraCommand.REPLY_OK);
+    }
+
+    private void atSetAddress() throws InterruptedException {
+        String setAddress = LoraCommand.AT_ADDR_SET.CODE + "07";
+        String command = setAddress + "\r\n";
+        sendCommandAndCheckReply(command, LoraCommand.REPLY_OK);
+    }
+
+    private void atSetConfiguration() throws InterruptedException {
+        String reset = LoraCommand.AT_CFG.CODE;
+        String command = reset + "433000000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n";
+        sendCommandAndCheckReply(command, LoraCommand.REPLY_OK);
+    }
+
+    private void sendCommandAndCheckReply(String command, LoraCommand expectedLoraReply) throws InterruptedException {
+        byte[] commandByte = command.getBytes();
+        try {
+            portOutputStream.write(commandByte);
+            portOutputStream.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Thread.sleep(4000);
+        String receivedMessage = LoraController.receivedMessage.poll();
+        checkReplyCode(LoraCommand.valueOfCode(receivedMessage), LoraCommand.REPLY_OK);
+    }
+
+    private boolean checkReplyCode(LoraCommand actualReplyCode, LoraCommand expectedReplyCode) {
+        return actualReplyCode.equals(expectedReplyCode);
+    }
+
     public void testConnectionInLab() {
         command = "AT+ADDR?" + "\r\n";
         byte[] commandByte = command.getBytes();
@@ -101,41 +148,5 @@ public class LoraController {
             e.printStackTrace();
         }
         System.exit(0);
-    }
-
-    public void setUpTheModule() {
-        atRST();
-    }
-
-    private void atRST() {
-        String reset = LoraCommand.AT_RST.CODE;
-        String command = reset + "\r\n";
-        byte[] commandByte = command.getBytes();
-        try {
-            portOutputStream.write(commandByte);
-            portOutputStream.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        String receivedMessage = LoraController.receivedMessage.poll();
-        //checkReplyCode()//todo: react to the reply
-    }
-
-
-    private void atSetAddress() throws InterruptedException {
-        String setAddress = LoraCommand.AT_ADDR_SET.CODE + "07";
-        String command = setAddress + "\r\n";
-        byte[] commandByte = command.getBytes();
-        try {
-            portOutputStream.write(commandByte);
-            portOutputStream.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        //checkReplyCode(Lora.valueOfCode(replyQueue.take()), Lora.REPLY_OK);
-    }
-
-    private boolean checkReplyCode(LoraCommand actualReplyCode, LoraCommand expectedReplyCode) {
-        return true;
     }
 }

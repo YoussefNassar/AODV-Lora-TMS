@@ -11,12 +11,12 @@ public class ReformatBuffer {
         String bufferString = new String(readBuffer);
         bufferReadToString = bufferReadToString.concat(bufferString);
 
-        if((bufferReadToString.indexOf(cutoffASCII) + 1) > 0) {
+        if ((bufferReadToString.indexOf(cutoffASCII) + 1) > 0) {
 
             String outputString = bufferReadToString.substring(0, bufferReadToString.indexOf(cutoffASCII) + 1);
             bufferReadToString = bufferReadToString.substring(bufferReadToString.indexOf(cutoffASCII) + 1); // adjust as needed to accommodate the CRLF convention ("\n\r"), ASCII 10 & 13
 
-            LoraController.receivedMessage.add(bufferReadToString);
+            LoraController.receivedMessage.add(outputString);
             System.out.print(outputString);
 
         }
