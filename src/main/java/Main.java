@@ -1,3 +1,5 @@
+import lora.LoraController;
+import protocol.ProtocolController;
 import protocol.RoutePath;
 import protocol.message.ACK;
 import protocol.message.MSG;
@@ -16,14 +18,36 @@ import java.util.Base64;
 public class Main {
 
     public static void main(String[] args) throws IOException, InterruptedException {
+        ProtocolController protocolController = new ProtocolController();
 
+        //set up connection and set up the module
+        LoraController loraController = new LoraController();
+        loraController.setUpBluetoothConnection();
+        loraController.setUpTheModule();
+
+        protocolController.startProtocolController();
+
+
+//        while (true) {
+//            System.out.println("enter your command: ");
+//            Scanner scanner = new Scanner(System.in);
+//            //String command = scanner.nextLine();
+//            //command = command.toUpperCase();
+//
+//            LoraController loraController = new LoraController();
+//            loraController.setUpCommunication();
+//            loraController.setUpTheModule();
+//            //loraController.testConnectionInLab();
+//        }
+    }
+
+    public void testEncoding() {
         RREQ RREQ = new RREQ((byte) 0, (byte) 4, (byte) 10, (byte) 120, (byte) 1,
                 (byte) 80, (byte) 2, (byte) 6, (byte) 100);
 
         RREP RREP = new RREP((byte) 16, (byte) 9, (byte) 7, (byte) 120, (byte) 1,
                 (byte) 80, (byte) 2, (byte) 11, (byte) 6);
 
-//        List<Byte> destinationAddresses = new ArrayList<>();
         RERR RERR = new RERR((byte) 32, (byte) 12, (byte) 1, (byte) 1);
         RERR.addPath(new RoutePath((byte) 20, (byte) 110));
 
@@ -53,18 +77,6 @@ public class Main {
 
         String decoded5 = Base64.getEncoder().withoutPadding().encodeToString(ack.toMessage());
         System.out.println(decoded5);
-
-//        while (true) {
-//            System.out.println("enter your command: ");
-//            Scanner scanner = new Scanner(System.in);
-//            //String command = scanner.nextLine();
-//            //command = command.toUpperCase();
-//
-//            LoraController loraController = new LoraController();
-//            loraController.setUpCommunication();
-//            loraController.setUpTheModule();
-//            //loraController.testConnectionInLab();
-//        }
     }
 
 }

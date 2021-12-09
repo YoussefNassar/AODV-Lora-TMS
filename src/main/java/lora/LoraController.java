@@ -1,6 +1,7 @@
 package lora;
 
 import com.fazecast.jSerialComm.SerialPort;
+import lora.exception.SetupException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,7 +18,9 @@ public class LoraController {
 
     String command = "";
 
-    public void setUpCommunication() {
+    int retry = 0;
+
+    public void setUpBluetoothConnection() {
         SerialPort[] allAvailableComPorts = SerialPort.getCommPorts();
 
         if (port == null) {
@@ -48,49 +51,65 @@ public class LoraController {
 
         CommandListener listener = new CommandListener();
         port.addDataListener(listener);
-
-        //to clean the input stream
-        //portInputStream.skip(portInputStream.available());
-//        command = command + "\r\n";
-//        byte[] commandByte = command.getBytes();
-//        portOutputStream.write(commandByte);
-//        portOutputStream.flush();
-//        Thread.sleep(1000);
-//        System.out.println("ready");
-
     }
 
     public void setUpTheModule() throws InterruptedException {
-        atSendAt();
-        //atRST();
-        //atSetConfiguration();
+        try {
+            testAt();
+            atSetAddress();
+            atSetConfiguration();
+        } catch (SetupException e) {
+            System.out.println("setup module failed");
+            System.exit(0);
+        }
     }
 
-    private void atSendAt() throws InterruptedException {
-        String reset = LoraCommand.AT.CODE;
-        String command = reset + "\r\n";
-        this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK);
+    private void testAt() throws InterruptedException, SetupException {
+        String at = LoraCommand.AT.CODE;
+        String command = at + "\r\n";
+        if (this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
+            System.out.println("testAt() failed");
+            System.out.println("retry");
+            retry++;
+            testAt();
+        } else if (retry == 4) {
+            System.out.println("testAt failed 3 times...");
+            retry = 0;
+            throw new SetupException();
+        }
     }
 
-    private void atRST() throws InterruptedException {
-        String reset = LoraCommand.AT_RST.CODE;
-        String command = reset + "\r\n";
-        sendCommandAndCheckReply(command, LoraCommand.REPLY_OK);
-    }
-
-    private void atSetAddress() throws InterruptedException {
+    private void atSetAddress() throws InterruptedException, SetupException {
         String setAddress = LoraCommand.AT_ADDR_SET.CODE + "07";
         String command = setAddress + "\r\n";
-        sendCommandAndCheckReply(command, LoraCommand.REPLY_OK);
+        if (this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
+            System.out.println("atSetAddress() failed");
+            System.out.println("retry");
+            retry++;
+            atSetAddress();
+        } else if (retry == 4) {
+            System.out.println("atSetAddress failed 3 times...");
+            retry = 0;
+            throw new SetupException();
+        }
     }
 
-    private void atSetConfiguration() throws InterruptedException {
+    private void atSetConfiguration() throws InterruptedException, SetupException {
         String reset = LoraCommand.AT_CFG.CODE;
         String command = reset + "433000000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n";
-        sendCommandAndCheckReply(command, LoraCommand.REPLY_OK);
+        if (this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
+            System.out.println("atSetConfiguration() failed");
+            System.out.println("retry");
+            retry++;
+            atSetConfiguration();
+        } else if (retry == 4) {
+            System.out.println("atSetConfiguration failed 3 times...");
+            retry = 0;
+            throw new SetupException();
+        }
     }
 
-    private void sendCommandAndCheckReply(String command, LoraCommand expectedLoraReply) throws InterruptedException {
+    private boolean sendCommandAndCheckReply(String command, LoraCommand expectedLoraReply) throws InterruptedException {
         byte[] commandByte = command.getBytes();
         try {
             portOutputStream.write(commandByte);
@@ -99,14 +118,30 @@ public class LoraController {
             e.printStackTrace();
         }
         Thread.sleep(4000);
+        //todo: recheck this logic
         String receivedMessage = LoraController.receivedMessage.poll();
-        checkReplyCode(LoraCommand.valueOfCode(receivedMessage), LoraCommand.REPLY_OK);
+
+        if (receivedMessage == null) {
+            System.out.println("nothing in the queue");
+            return false;
+        }
+
+        if (!checkReplyCode(LoraCommand.valueOfCode(receivedMessage), expectedLoraReply)) {  //&& retry < 4) {
+            System.out.println("wrong response: " + expectedLoraReply.CODE);
+            return false;
+//            sendCommandAndCheckReply(command, expectedLoraReply);
+        } else {
+            System.out.println("success: " + expectedLoraReply.CODE);
+            return true;
+        }
     }
 
     private boolean checkReplyCode(LoraCommand actualReplyCode, LoraCommand expectedReplyCode) {
         return actualReplyCode.equals(expectedReplyCode);
     }
 
+
+    //this is used when you want to test if the connection is working fine with the module
     public void testConnectionInLab() {
         command = "AT+ADDR?" + "\r\n";
         byte[] commandByte = command.getBytes();
