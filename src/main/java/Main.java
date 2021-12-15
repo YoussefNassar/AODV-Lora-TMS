@@ -20,12 +20,18 @@ public class Main {
     public static void main(String[] args) throws IOException, InterruptedException {
         ProtocolController protocolController = new ProtocolController();
 
-        //set up connection and set up the module
-        LoraController loraController = new LoraController();
-        loraController.setUpBluetoothConnection();
-        loraController.setUpTheModule();
+        Main main = new Main();
+        main.testEncoding();
 
-        protocolController.startProtocolController();
+        //set up connection and set up the module
+//        LoraController loraController = new LoraController();
+//        loraController.setUpBluetoothConnection();
+//        loraController.setUpTheModule();
+//
+//        while (true) {
+//            protocolController.startProtocolController();
+//            Thread.sleep(1000);
+//        }
 
 
 //        while (true) {
@@ -42,40 +48,46 @@ public class Main {
     }
 
     public void testEncoding() {
-        RREQ RREQ = new RREQ((byte) 0, (byte) 4, (byte) 10, (byte) 120, (byte) 1,
+        RREQ routeRequest = new RREQ((byte) 0, (byte) 4, (byte) 10, (byte) 120, (byte) 1,
                 (byte) 80, (byte) 2, (byte) 6, (byte) 100);
 
-        RREP RREP = new RREP((byte) 16, (byte) 9, (byte) 7, (byte) 120, (byte) 1,
+        RREP routeReply = new RREP((byte) 16, (byte) 9, (byte) 7, (byte) 120, (byte) 1,
                 (byte) 80, (byte) 2, (byte) 11, (byte) 6);
 
-        RERR RERR = new RERR((byte) 32, (byte) 12, (byte) 1, (byte) 1);
-        RERR.addPath(new RoutePath((byte) 20, (byte) 110));
+        RERR Error = new RERR((byte) 32, (byte) 12, (byte) 1, (byte) 1);
+        Error.addPath(new RoutePath((byte) 20, (byte) 110));
 
-        RERR RERR1 = new RERR((byte) 32, (byte) 8, (byte) 3, (byte) 2);
-        RERR1.addPath(new RoutePath((byte) 21, (byte) 51));
-        RERR1.addPath(new RoutePath((byte) 18, (byte) 10));
+        RERR error1 = new RERR((byte) 32, (byte) 8, (byte) 3, (byte) 2);
+        error1.addPath(new RoutePath((byte) 21, (byte) 51));
+        error1.addPath(new RoutePath((byte) 18, (byte) 10));
 
-        MSG msg = new MSG((byte) 48, (byte) 2, (byte) 15, (byte) 4, (byte) 100, (byte) 4, "AODV");
+        MSG message = new MSG((byte) 48, (byte) 2, (byte) 15, (byte) 4, (byte) 100, (byte) 4, "AODV");
 
-        ACK ack = new ACK((byte) 64, (byte) 3, (byte) 67);
+        ACK acknowledgement = new ACK((byte) 64, (byte) 3, (byte) 67);
 
-        String decoded = Base64.getEncoder().encodeToString(RREQ.toMessage());
+        String decoded = Base64.getEncoder().encodeToString(routeRequest.toMessage());
         System.out.println(decoded);
+        byte[] decode = Base64.getDecoder().decode(decoded);
+        System.out.println(decode);
 
-        String decoded1 = Base64.getEncoder().encodeToString(RREP.toMessage());
+        String decoded1 = Base64.getEncoder().encodeToString(routeReply.toMessage());
         System.out.println(decoded1);
 
-        String decoded2 = Base64.getEncoder().withoutPadding().encodeToString(RERR.toMessage());
+        String decoded2 = Base64.getEncoder().withoutPadding().encodeToString(Error.toMessage());
         System.out.println(decoded2);
+        byte[] decodeError = Base64.getDecoder().decode(decoded2);
+        System.out.println(decodeError);
 
-        String decoded3 = Base64.getEncoder().withoutPadding().encodeToString(RERR1.toMessage());
+        String decoded3 = Base64.getEncoder().withoutPadding().encodeToString(error1.toMessage());
         System.out.println(decoded3);
+        byte[] decodeError2 = Base64.getDecoder().decode(decoded3);
+        System.out.println(decodeError2);
 
-        String decoded4 = Base64.getEncoder().withoutPadding().encodeToString(msg.toMessage());
-        decoded4 = decoded4 + msg.getText();
+        String decoded4 = Base64.getEncoder().withoutPadding().encodeToString(message.toMessage());
+        decoded4 = decoded4 + message.getText();
         System.out.println(decoded4);
 
-        String decoded5 = Base64.getEncoder().withoutPadding().encodeToString(ack.toMessage());
+        String decoded5 = Base64.getEncoder().withoutPadding().encodeToString(acknowledgement.toMessage());
         System.out.println(decoded5);
     }
 

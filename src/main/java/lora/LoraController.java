@@ -4,7 +4,6 @@ import com.fazecast.jSerialComm.SerialPort;
 import lora.exception.SetupException;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -12,9 +11,8 @@ import java.util.Queue;
 public class LoraController {
 
     public static Queue<String> receivedMessage = new LinkedList(); //todo: read about raw type (the warning)
+    public static OutputStream portOutputStream;
     private static SerialPort port;
-    InputStream portInputStream;
-    OutputStream portOutputStream;
 
     String command = "";
 
@@ -45,8 +43,6 @@ public class LoraController {
         //check the name
         System.out.println("Opened port: " + port.getDescriptivePortName());
 
-
-        portInputStream = port.getInputStream();
         portOutputStream = port.getOutputStream();
 
         CommandListener listener = new CommandListener();
@@ -62,6 +58,7 @@ public class LoraController {
             System.out.println("setup module failed");
             System.exit(0);
         }
+        System.out.println("setup completed");
     }
 
     private void testAt() throws InterruptedException, SetupException {
