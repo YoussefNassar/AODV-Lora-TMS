@@ -9,30 +9,43 @@ import protocol.message.RREQ;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.List;
 
 public class ProtocolController {
 
-    // Routing table of all valid routes
-    private HashMap<Integer, Route> routingTable = new HashMap<>();
-    private HashMap<Integer, Route> reverseRoutingTable = new HashMap<>();
+    LoraController loraController;
+    byte nodeAddress = 7;
 
-    public static Queue<String> receivedMessage = new LinkedList();
+    // Routing table of all valid routes
+//    private HashMap<Integer, Route> routingTable = new HashMap<>();
+//    private HashMap<Integer, Route> reverseRoutingTable = new HashMap<>();
+    private List<Route> routingTable = new ArrayList<>();
+    private List<ReverseRoute> reverseRoutingTable = new ArrayList<>();
+
+//    public static Queue<String> receivedMessage = new LinkedList();
 
     BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
 
-    public void startProtocolController() throws IOException {
-        System.out.println("begin protocol...");
+    public ProtocolController(LoraController loraController) {
+        this.loraController = loraController;
+        this.addSelfToRoutingTable();
+    }
 
+
+    public void startProtocolController() throws IOException {
         this.checkQueue();
         this.waitForInput();
     }
 
+    private void addSelfToRoutingTable() {
+        Route route = new Route((byte) 7, (byte) 7, null, (byte) 5, (byte) 1, true);
+        routingTable.add(route);
+    }
+
     private void checkQueue() {
-        String decodedReceivedMessage = receivedMessage.poll();
+        String decodedReceivedMessage = LoraController.receivedMessage.poll();
         if (decodedReceivedMessage == null) {
             return;
         } else {
@@ -92,6 +105,14 @@ public class ProtocolController {
         RREQ routeRequest = new RREQ(decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3],
                 decodedBytes[4], decodedBytes[5], decodedBytes[6], decodedBytes[7], decodedBytes[8]);
 
+        Route route = checkRoutingTable(decodedBytes[4]);
+
+        if (route == null) {
+            writeToReversRoutingTable(routeRequest);
+            broadCastRouteRequest(routeRequest);
+        } else {
+            sendRouteReply(routeRequest);
+        }
 
     }
 
@@ -115,12 +136,55 @@ public class ProtocolController {
         byte[] messageByte = new byte[decodedBytes.length - 6];
 
         for (int i = 0; i < decodedBytes.length - 6; i++) {
-            messageByte[i] = decodedBytes[i+6];
+            messageByte[i] = decodedBytes[i + 6];
         }
 
         String messageString = new String(messageByte);
 
         MSG message = new MSG(decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3], decodedBytes[4],
                 decodedBytes[5], messageString);
+    }
+
+    private Route checkRoutingTable(byte destinationAddress) {
+        Route route1 = routingTable.stream()
+                .filter(route -> route.getDestinationAddress() == destinationAddress)
+                .findAny()
+                .orElse(null);
+        return route1;
+    }
+
+    private void writeToReversRoutingTable(RREQ routeRequest) {
+        ReverseRoute reverseRoute = new ReverseRoute(routeRequest.getDestinationAddress(),
+                routeRequest.getOriginatorAddress(), routeRequest.getRequestId(), routeRequest.getHopCount(),
+                routeRequest.getPrevHopAddress());
+        reverseRoutingTable.add(reverseRoute);
+        System.out.println("add to reverse routing table");
+    }
+
+    private void broadCastRouteRequest(RREQ routeRequest) {
+        byte[] routeRequestBytes = routeRequest.toMessage();
+
+        try {
+            if (!loraController.sendMessage(routeRequestBytes)) {
+                System.out.println("sending route request failed");
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //todo: not sure about the fields
+    private void sendRouteReply(RREQ routeRequest) {
+        RREP routeReplay = new RREP((byte) 16, routeRequest.getPrevHopAddress(), nodeAddress,
+                routeRequest.getRequestId(), routeRequest.getOriginatorAddress(), routeRequest.getDestinationSequence()
+                , (byte) 0, nodeAddress, routeRequest.getTTL());
+
+        byte[] routeReplyByte = routeReplay.toMessage();
+
+        try {
+            loraController.sendMessage(routeReplyByte);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }

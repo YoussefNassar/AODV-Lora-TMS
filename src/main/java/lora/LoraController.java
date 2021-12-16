@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class LoraController {
 
@@ -106,7 +107,7 @@ public class LoraController {
         }
     }
 
-    private boolean sendCommandAndCheckReply(String command, LoraCommand expectedLoraReply) throws InterruptedException {
+    public boolean sendCommandAndCheckReply(String command, LoraCommand expectedLoraReply) throws InterruptedException {
         byte[] commandByte = command.getBytes();
         try {
             portOutputStream.write(commandByte);
@@ -135,6 +136,39 @@ public class LoraController {
 
     private boolean checkReplyCode(LoraCommand actualReplyCode, LoraCommand expectedReplyCode) {
         return actualReplyCode.equals(expectedReplyCode);
+    }
+
+    // this was called sendRouteRequestMessage()
+    public boolean sendMessage(byte[] routeRequestBytes) throws InterruptedException {
+        String command = LoraCommand.AT_SEND.CODE + routeRequestBytes.length + "\r\n";
+        byte[] commandByte = command.getBytes();
+        try {
+            Thread.sleep(ThreadLocalRandom.current().nextInt(3000, 6000 + 1));
+            portOutputStream.write(commandByte);
+            portOutputStream.flush();
+            Thread.sleep(ThreadLocalRandom.current().nextInt(3000, 6000 + 1));
+            portOutputStream.write(routeRequestBytes);
+            portOutputStream.flush();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+        Thread.sleep(4000);
+
+        String receivedMessage = LoraController.receivedMessage.poll();
+
+        if (receivedMessage == null) {
+            System.out.println("nothing in the queue");
+            return false;
+        }
+
+        if (checkReplyCode(LoraCommand.valueOfCode(LoraController.receivedMessage.poll()), LoraCommand.REPLY_SENDED)) {
+            retry = 0;
+            return true;
+        } else if (retry <= 3) {
+            sendMessage(routeRequestBytes);
+            retry++;
+        }
+        return false;
     }
 
 

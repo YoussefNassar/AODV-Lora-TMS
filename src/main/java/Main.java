@@ -18,20 +18,20 @@ import java.util.Base64;
 public class Main {
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        ProtocolController protocolController = new ProtocolController();
 
-        Main main = new Main();
-        main.testEncoding();
+//        Main main = new Main();
+//        main.testEncoding();
 
-        //set up connection and set up the module
-//        LoraController loraController = new LoraController();
-//        loraController.setUpBluetoothConnection();
-//        loraController.setUpTheModule();
-//
-//        while (true) {
-//            protocolController.startProtocolController();
-//            Thread.sleep(1000);
-//        }
+//        set up connection and set up the module
+        LoraController loraController = new LoraController();
+        ProtocolController protocolController = new ProtocolController(loraController);
+        loraController.setUpBluetoothConnection();
+        loraController.setUpTheModule();
+
+        while (true) {
+            protocolController.startProtocolController();
+            Thread.sleep(1000);
+        }
 
 
 //        while (true) {
