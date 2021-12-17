@@ -19,7 +19,6 @@ public class ReformatBuffer {
             bufferReadToString = bufferReadToString.substring(bufferReadToString.indexOf(cutoffASCII) + 1); // adjust as needed to accommodate the CRLF convention ("\n\r"), ASCII 10 & 13
 
             LoraController.receivedMessage.add(outputString);
-            ProtocolController.receivedMessage.add(outputString);
             System.out.print(outputString);
 
         }

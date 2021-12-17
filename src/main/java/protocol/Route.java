@@ -20,6 +20,14 @@ public class Route {
         this.isValid = isValid;
     }
 
+    public Route(byte destinationAddress, byte nextHop, byte hopCount, byte destinationSequenceNumber, boolean isValid) {
+        this.destinationAddress = destinationAddress;
+        this.nextHop = nextHop;
+        this.hopCount = hopCount;
+        this.destinationSequenceNumber = destinationSequenceNumber;
+        this.isValid = isValid;
+    }
+
     public byte getDestinationAddress() {
         return destinationAddress;
     }

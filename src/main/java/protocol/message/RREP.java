@@ -19,6 +19,54 @@ public class RREP extends Message {
         this.TTL = TTL;
     }
 
+    public byte getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(byte requestId) {
+        this.requestId = requestId;
+    }
+
+    public byte getDestinationAddress() {
+        return destinationAddress;
+    }
+
+    public void setDestinationAddress(byte destinationAddress) {
+        this.destinationAddress = destinationAddress;
+    }
+
+    public byte getDestinationSequence() {
+        return destinationSequence;
+    }
+
+    public void setDestinationSequence(byte destinationSequence) {
+        this.destinationSequence = destinationSequence;
+    }
+
+    public byte getHopCount() {
+        return hopCount;
+    }
+
+    public void setHopCount(byte hopCount) {
+        this.hopCount = hopCount;
+    }
+
+    public byte getOriginatorAddress() {
+        return originatorAddress;
+    }
+
+    public void setOriginatorAddress(byte originatorAddress) {
+        this.originatorAddress = originatorAddress;
+    }
+
+    public byte getTTL() {
+        return TTL;
+    }
+
+    public void setTTL(byte TTL) {
+        this.TTL = TTL;
+    }
+
     @Override
     public byte[] toMessage() {
         return new byte[]{getType_flags(), getHopAddress(), getPrevHopAddress(), requestId, destinationAddress

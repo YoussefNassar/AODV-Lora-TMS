@@ -55,6 +55,7 @@ public class LoraController {
             testAt();
             atSetAddress();
             atSetConfiguration();
+            sendRandomMessage();
         } catch (SetupException e) {
             System.out.println("setup module failed");
             System.exit(0);
@@ -65,7 +66,7 @@ public class LoraController {
     private void testAt() throws InterruptedException, SetupException {
         String at = LoraCommand.AT.CODE;
         String command = at + "\r\n";
-        if (this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
+        if (!this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
             System.out.println("testAt() failed");
             System.out.println("retry");
             retry++;
@@ -75,12 +76,14 @@ public class LoraController {
             retry = 0;
             throw new SetupException();
         }
+        retry = 0;
+        System.out.println("testAt worked");
     }
 
     private void atSetAddress() throws InterruptedException, SetupException {
         String setAddress = LoraCommand.AT_ADDR_SET.CODE + "07";
         String command = setAddress + "\r\n";
-        if (this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
+        if (!this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
             System.out.println("atSetAddress() failed");
             System.out.println("retry");
             retry++;
@@ -90,12 +93,14 @@ public class LoraController {
             retry = 0;
             throw new SetupException();
         }
+        retry = 0;
+        System.out.println("atSetAddress worked");
     }
 
     private void atSetConfiguration() throws InterruptedException, SetupException {
         String reset = LoraCommand.AT_CFG.CODE;
         String command = reset + "433000000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n";
-        if (this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
+        if (!this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
             System.out.println("atSetConfiguration() failed");
             System.out.println("retry");
             retry++;
@@ -105,7 +110,51 @@ public class LoraController {
             retry = 0;
             throw new SetupException();
         }
+        retry = 0;
+        System.out.println("atSetConfiguration worked");
     }
+
+    private void sendRandomMessage() throws SetupException, InterruptedException {
+
+        sendAtSend();
+        sendFirstMessage();
+    }
+
+    private void sendAtSend() throws InterruptedException, SetupException {
+        String at = LoraCommand.AT_SEND.CODE + "5";
+        String command = at + "\r\n";
+        if (!this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
+            System.out.println("sendAtSend failed");
+            System.out.println("retry");
+            retry++;
+            sendRandomMessage();
+        } else if (retry == 4) {
+            System.out.println("sendAtSend failed 3 times...");
+            retry = 0;
+            throw new SetupException();
+        }
+        retry = 0;
+        System.out.println("sendAtSend worked");
+    }
+
+    private void sendFirstMessage() throws InterruptedException, SetupException {
+        String at = "hello";
+        String command = at + "\r\n";
+        if (!this.sendCommandAndCheckReply(command, LoraCommand.REPLY_SENDING) && retry < 4) {
+            System.out.println("sendFirstMessage failed");
+            System.out.println("retry");
+            retry++;
+            sendRandomMessage();
+        } else if (retry == 4) {
+            System.out.println("sendFirstMessage failed 3 times...");
+            retry = 0;
+            throw new SetupException();
+        }
+        retry = 0;
+        System.out.println("sendFirstMessage worked");
+    }
+
+
 
     public boolean sendCommandAndCheckReply(String command, LoraCommand expectedLoraReply) throws InterruptedException {
         byte[] commandByte = command.getBytes();
@@ -124,6 +173,9 @@ public class LoraController {
             return false;
         }
 
+        //remove the new line at the end
+        receivedMessage = receivedMessage.substring(0, receivedMessage.length()-2);
+
         if (!checkReplyCode(LoraCommand.valueOfCode(receivedMessage), expectedLoraReply)) {  //&& retry < 4) {
             System.out.println("wrong response: " + expectedLoraReply.CODE);
             return false;
@@ -139,15 +191,15 @@ public class LoraController {
     }
 
     // this was called sendRouteRequestMessage()
-    public boolean sendMessage(byte[] routeRequestBytes) throws InterruptedException {
-        String command = LoraCommand.AT_SEND.CODE + routeRequestBytes.length + "\r\n";
+    public boolean sendMessage(byte[] messageBytes) throws InterruptedException {
+        String command = LoraCommand.AT_SEND.CODE + messageBytes.length + "\r\n";
         byte[] commandByte = command.getBytes();
         try {
             Thread.sleep(ThreadLocalRandom.current().nextInt(3000, 6000 + 1));
             portOutputStream.write(commandByte);
             portOutputStream.flush();
-            Thread.sleep(ThreadLocalRandom.current().nextInt(3000, 6000 + 1));
-            portOutputStream.write(routeRequestBytes);
+            Thread.sleep(4000);
+            portOutputStream.write(messageBytes);
             portOutputStream.flush();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
@@ -165,7 +217,7 @@ public class LoraController {
             retry = 0;
             return true;
         } else if (retry <= 3) {
-            sendMessage(routeRequestBytes);
+            sendMessage(messageBytes);
             retry++;
         }
         return false;
