@@ -1,7 +1,5 @@
 package lora;
 
-import protocol.ProtocolController;
-
 public class ReformatBuffer {
     public String outputString;
 
@@ -20,7 +18,6 @@ public class ReformatBuffer {
 
             LoraController.receivedMessage.add(outputString);
             System.out.print(outputString);
-
         }
     }
 }

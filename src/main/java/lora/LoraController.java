@@ -121,7 +121,7 @@ public class LoraController {
     }
 
     private void sendAtSend() throws InterruptedException, SetupException {
-        String at = LoraCommand.AT_SEND.CODE + "5";
+        String at = LoraCommand.AT_SEND.CODE + "17";
         String command = at + "\r\n";
         if (!this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
             System.out.println("sendAtSend failed");
@@ -138,7 +138,7 @@ public class LoraController {
     }
 
     private void sendFirstMessage() throws InterruptedException, SetupException {
-        String at = "hello";
+        String at = "hello from Node 7";
         String command = at + "\r\n";
         if (!this.sendCommandAndCheckReply(command, LoraCommand.REPLY_SENDING) && retry < 4) {
             System.out.println("sendFirstMessage failed");
@@ -152,6 +152,7 @@ public class LoraController {
         }
         retry = 0;
         System.out.println("sendFirstMessage worked");
+        receivedMessage.poll();
     }
 
 
@@ -213,14 +214,17 @@ public class LoraController {
             return false;
         }
 
-        if (checkReplyCode(LoraCommand.valueOfCode(LoraController.receivedMessage.poll()), LoraCommand.REPLY_SENDED)) {
-            retry = 0;
-            return true;
-        } else if (retry <= 3) {
-            sendMessage(messageBytes);
-            retry++;
-        }
-        return false;
+        //todo : check if you need to check
+        return true;
+
+//        if (checkReplyCode(LoraCommand.valueOfCode(LoraController.receivedMessage.poll()), LoraCommand.REPLY_SENDED)) {
+//            retry = 0;
+//            return true;
+//        } else if (retry <= 3) {
+//            sendMessage(messageBytes);
+//            retry++;
+//        }
+//        return false;
     }
 
 
