@@ -6,17 +6,15 @@ public class RREP extends Message {
     private byte destinationSequence;
     private byte hopCount;
     private byte originatorAddress;
-    private byte TTL;
 
     public RREP(byte type_flags, byte hopAddress, byte prevHopAddress, byte requestId, byte destinationAddress,
-                byte destinationSequence, byte hopCount, byte originatorAddress, byte TTL) {
+                byte destinationSequence, byte hopCount, byte originatorAddress) {
         super(type_flags, hopAddress, prevHopAddress);
         this.requestId = requestId;
         this.destinationAddress = destinationAddress;
         this.destinationSequence = destinationSequence;
         this.hopCount = hopCount;
         this.originatorAddress = originatorAddress;
-        this.TTL = TTL;
     }
 
     public byte getRequestId() {
@@ -59,17 +57,9 @@ public class RREP extends Message {
         this.originatorAddress = originatorAddress;
     }
 
-    public byte getTTL() {
-        return TTL;
-    }
-
-    public void setTTL(byte TTL) {
-        this.TTL = TTL;
-    }
-
     @Override
     public byte[] toMessage() {
         return new byte[]{getType_flags(), getHopAddress(), getPrevHopAddress(), requestId, destinationAddress
-                , destinationSequence, hopCount, originatorAddress, TTL};
+                , destinationSequence, hopCount, originatorAddress};
     }
 }

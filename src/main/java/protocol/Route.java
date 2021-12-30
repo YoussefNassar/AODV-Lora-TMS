@@ -5,8 +5,8 @@ import java.util.List;
 public class Route {
     private byte destinationAddress;
     private byte nextHop;
-//    private List<Byte> precursors;  this is the right way
-    private byte[] precursors;
+    private List<Byte> precursors;
+//    private byte[] precursors;
     private byte hopCount;  //aka metric
     private byte destinationSequenceNumber;
     private boolean isValid;
@@ -14,7 +14,7 @@ public class Route {
     public Route() {
     }
 
-    public Route(byte destinationAddress, byte nextHop, byte[] precursors, byte hopCount, byte destinationSequenceNumber, boolean isValid) {
+    public Route(byte destinationAddress, byte nextHop, List<Byte> precursors, byte hopCount, byte destinationSequenceNumber, boolean isValid) {
         this.destinationAddress = destinationAddress;
         this.nextHop = nextHop;
         this.precursors = precursors;
@@ -47,11 +47,11 @@ public class Route {
         this.nextHop = nextHop;
     }
 
-    public byte[] getPrecursors() {
+    public List<Byte> getPrecursors() {
         return precursors;
     }
 
-    public void setPrecursors(byte[] precursors) {
+    public void setPrecursors(List<Byte> precursors) {
         this.precursors = precursors;
     }
 

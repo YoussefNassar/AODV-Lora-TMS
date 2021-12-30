@@ -52,7 +52,7 @@ public class Main {
                 (byte) 80, (byte) 2, (byte) 6, (byte) 100);
 
         RREP routeReply = new RREP((byte) 16, (byte) 9, (byte) 7, (byte) 120, (byte) 1,
-                (byte) 80, (byte) 2, (byte) 11, (byte) 6);
+                (byte) 80, (byte) 2, (byte) 11);
 
         RERR Error = new RERR((byte) 32, (byte) 12, (byte) 1, (byte) 1);
         Error.addPath(new RoutePath((byte) 20, (byte) 110));
