@@ -216,15 +216,6 @@ public class LoraController {
 
         //todo : check if you need to check
         return true;
-
-//        if (checkReplyCode(LoraCommand.valueOfCode(LoraController.receivedMessage.poll()), LoraCommand.REPLY_SENDED)) {
-//            retry = 0;
-//            return true;
-//        } else if (retry <= 3) {
-//            sendMessage(messageBytes);
-//            retry++;
-//        }
-//        return false;
     }
 
 

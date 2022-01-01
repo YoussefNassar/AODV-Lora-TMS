@@ -14,6 +14,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ProtocolController {
 
@@ -69,6 +70,57 @@ public class ProtocolController {
             this.waitingForAcknowledgement = false;
             this.acknowledgmentReties = 0;
             //todo: #start route errors
+            List<Route> allRoutesWithUnreachableHopAddress = findUnreachableRoutes(this.savedMessageForRetries[1]);
+            invalidRoutes(allRoutesWithUnreachableHopAddress);
+            sendRouteErrors(allRoutesWithUnreachableHopAddress);
+        }
+    }
+
+    private List<Route> findUnreachableRoutes(byte unreachableHopAddress) {
+        List<Route> allRoutesWithHopAddress = getAllRoutesWithHopAddress(unreachableHopAddress);
+        allRoutesWithHopAddress.forEach(route -> route.setValid(false));
+        return allRoutesWithHopAddress;
+    }
+
+    private void invalidRoutes(List<Route> allRoutesWithUnreachableHopAddress) {
+        allRoutesWithUnreachableHopAddress.forEach(route -> route.setValid(false));
+    }
+
+    private void sendRouteErrors(List<Route> allRoutesWithUnreachableHopAddress) {
+        List<Byte> sentTo = new ArrayList<>();
+        List<RoutePath> routePaths = new ArrayList<>();
+        List<Byte> precursors = new ArrayList<>();
+        int pathCount = allRoutesWithUnreachableHopAddress.size();
+
+        //get all precursors
+        for (Route route : allRoutesWithUnreachableHopAddress) {
+            for (Byte precursor : route.getPrecursors()) {
+                if (!(precursors.contains(precursor))) {
+                    precursors.add(precursor);
+                }
+            }
+        }
+
+        for (Route route : allRoutesWithUnreachableHopAddress) {
+            RoutePath routePath = new RoutePath(route.getDestinationAddress(), route.getDestinationSequenceNumber());
+            routePaths.add(routePath);
+        }
+
+        for (Byte precursor : precursors) {
+            if (!sentTo.contains(precursor)) {
+                sendRouteErrorMessage(precursor, pathCount, routePaths);
+                sentTo.add(precursor);
+            }
+        }
+    }
+
+    private void sendRouteErrorMessage(Byte precursor, int pathCount, List<RoutePath> routePaths) {
+        RERR routeError = new RERR((byte) 32, precursor, this.nodeAddress, (byte) pathCount, routePaths);
+        byte[] routeErrorBytes = routeError.toMessage();
+        try {
+            loraController.sendMessage(routeErrorBytes);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
@@ -79,6 +131,10 @@ public class ProtocolController {
             this.routeRequestRetries++;
             System.out.println("no route response yet");
             System.out.println("resending route request");
+            this.requestId++;
+            this.sequenceNumber++;
+            this.savedRouteRequestForRetries.setRequestId(this.requestId);
+            this.savedRouteRequestForRetries.setDestinationSequence(this.sequenceNumber);
             broadCastRouteRequest(this.savedRouteRequestForRetries);
         } else if (this.waitingForRouteReply && this.routeRequestRetries == 3) {
             System.out.println("send route request 3 times and no route response was received");
@@ -146,8 +202,8 @@ public class ProtocolController {
 
         if (route == null) {
             //no route found in the routing table, creating a route request...
-            RREQ routeRequest = new RREQ((byte) 0, (byte) 255, this.nodeAddress, (byte) 1,
-                    (byte) destinationAddress, (byte) 0, (byte) 0, this.nodeAddress, (byte) 1);
+            RREQ routeRequest = new RREQ((byte) 0, (byte) 255, this.nodeAddress, ++this.requestId,
+                    (byte) destinationAddress, (byte) 0, (byte) 0, this.nodeAddress, ++this.sequenceNumber);
             broadCastRouteRequest(routeRequest);
             //wait for route reply
             this.waitingForRouteReply = true;
@@ -295,6 +351,8 @@ public class ProtocolController {
     private void handleRouteError(byte[] decodedBytes) {
         RERR error = new RERR(decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3]);
 
+        sendAcknowledgementAfterReceivingRouteError(error);
+
         for (int i = 4; i < decodedBytes.length; i += 2) {
             for (int j = 5; j < decodedBytes.length; j += 2) {
                 RoutePath routePath = new RoutePath(decodedBytes[i], decodedBytes[j]);
@@ -363,6 +421,7 @@ public class ProtocolController {
     }
 
     //todo: check the parameter of the route
+
     private void updateRoutingTable(@NotNull RREP routeReply) {
         Route route1 = checkRoutingTable(routeReply.getOriginatorAddress());
         if (route1 == null) {
@@ -378,6 +437,7 @@ public class ProtocolController {
 
     private void sendAcknowledgementAfterReceivingMessage(MSG message) {
         ACK acknowledgmenet = new ACK((byte) 48, message.getPrevHopAddress(), this.nodeAddress);
+        //todo: continue
     }
 
     private void createRouteReply(ReverseRoute reverseRoute, RREP routeReply) {
@@ -389,6 +449,30 @@ public class ProtocolController {
             System.out.println("acknowledgement received");
             this.waitingForAcknowledgement = false;
             this.acknowledgmentReties = 0;
+        }
+    }
+
+    private List<Route> getAllRoutesWithHopAddress(byte unreachableHopAddress) {
+        return this.routingTable.stream()
+                .filter(route -> route.getNextHop() == unreachableHopAddress && !route.isValid())
+                .collect(Collectors.toList());
+    }
+
+    private void sendAcknowledgementAfterReceivingRouteError(RERR error) {
+        ACK acknowledgment = new ACK((byte) 64, error.getPrevHopAddress(), this.nodeAddress);
+        sendAcknowledgmentPacket(acknowledgment);
+        System.out.println("Acknowledgement message couldn't be send");
+    }
+
+    private void sendAcknowledgmentPacket(ACK acknowledgement) {
+        byte[] acknowledgementBytes = acknowledgement.toMessage();
+
+        try {
+            if (!loraController.sendMessage(acknowledgementBytes)) {
+                System.out.println("sending acknowledgement failed");
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 }

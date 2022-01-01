@@ -59,6 +59,8 @@ public class RREQ extends Message {
         this.originatorAddress = originatorAddress;
     }
 
+
+
     @Override
     public byte[] toMessage() {
         return new byte[]{getType_flags(), getHopAddress(), getPrevHopAddress(), requestId, destinationAddress
