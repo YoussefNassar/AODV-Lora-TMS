@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RERR extends Message {
-    private byte pathCount; // not sure if still needed
+    private byte pathCount;
     private List<RoutePath> destinationAddresses = new ArrayList<>();
 
     public RERR(byte type_flags, byte hopAddress, byte prevHopAddress, byte pathCount, List<RoutePath> destinationAddresses) {
@@ -17,6 +17,14 @@ public class RERR extends Message {
 
     public RERR(byte type_flags, byte hopAddress, byte prevHopAddress, byte pathCount) {
         super(type_flags, hopAddress, prevHopAddress);
+        this.pathCount = pathCount;
+    }
+
+    public byte getPathCount() {
+        return pathCount;
+    }
+
+    public void setPathCount(byte pathCount) {
         this.pathCount = pathCount;
     }
 
