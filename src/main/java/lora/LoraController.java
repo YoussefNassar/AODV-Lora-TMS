@@ -115,7 +115,6 @@ public class LoraController {
     }
 
     private void sendRandomMessage() throws SetupException, InterruptedException {
-
         sendAtSend();
         sendFirstMessage();
     }

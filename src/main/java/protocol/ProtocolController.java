@@ -13,7 +13,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ProtocolController {
@@ -34,6 +36,10 @@ public class ProtocolController {
     private int routeRequestRetries = 0;
     private long startTimeWaitingForRouteResponse;
     private RREQ savedRouteRequestForRetries;
+
+    Map<Integer, Integer> routesRequestEchoCheck = new HashMap<>();
+    Map<Integer, Integer> MessageEchoCheck = new HashMap<>();
+
 
 
     BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
@@ -145,9 +151,7 @@ public class ProtocolController {
 
     private void checkQueue() {
         String decodedReceivedMessage = LoraController.receivedMessage.poll();
-        if (decodedReceivedMessage == null) {
-            return;
-        } else {
+        if (decodedReceivedMessage != null) {
             int indexOfLastComma = decodedReceivedMessage.indexOf(",", 8);
 
             if (indexOfLastComma == -1) {
@@ -265,7 +269,7 @@ public class ProtocolController {
                     break;
                 case 48:
                     //message
-                    handleMessage(decodedBytes);
+                    handleMessage(decodedBytes, decodedReceivedMessage);
                     break;
                 case 64:
                     //acknowledgement
@@ -394,21 +398,21 @@ public class ProtocolController {
         }
     }
 
-    private void handleMessage(byte[] decodedBytes) {
-        byte[] messageByte = new byte[decodedBytes.length - 6];
+    private void handleMessage(byte[] decodedBytes, String decodedReceivedMessage) {
+        if (decodedBytes[3] == this.nodeAddress) {
 
-        for (int i = 0; i < decodedBytes.length - 6; i++) {
-            messageByte[i] = decodedBytes[i + 6];
+            String messageString = decodedReceivedMessage.substring(8);
+
+            MSG message = new MSG(decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3], decodedBytes[4],
+                    decodedBytes[5], messageString);
+            System.out.println("*******************************************");
+            System.out.println("received message:");
+            System.out.println(messageString);
+            System.out.println("*******************************************");
+
+            System.out.println("sending acknowledgement");
+            sendAcknowledgementAfterReceivingMessage(message);
         }
-
-        String messageString = new String(messageByte);
-
-        MSG message = new MSG(decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3], decodedBytes[4],
-                decodedBytes[5], messageString);
-        System.out.println("Message from '" + message.getOriginatorAddress() + "'");
-        System.out.println(messageString);
-        System.out.println("sending acknowledgement");
-        sendAcknowledgementAfterReceivingMessage(message);
     }
 
     private Route checkRoutingTable(byte destinationAddress) {
@@ -435,6 +439,7 @@ public class ProtocolController {
 
     private void broadCastRouteRequest(RREQ routeRequest) {
         byte[] routeRequestBytes = routeRequest.toMessage();
+        routeRequestBytes = Base64.getEncoder().encodeToString(routeRequestBytes).getBytes();
 
         try {
             if (!loraController.sendMessage(routeRequestBytes)) {
@@ -446,6 +451,7 @@ public class ProtocolController {
     }
 
     private void sendRouteReply(byte[] routeReplyByte) {
+        routeReplyByte = Base64.getEncoder().encodeToString(routeReplyByte).getBytes();
         try {
             loraController.sendMessage(routeReplyByte);
         } catch (InterruptedException e) {
@@ -470,7 +476,6 @@ public class ProtocolController {
 
     private void sendAcknowledgementAfterReceivingMessage(MSG message) {
         ACK acknowledgement = new ACK((byte) 64, message.getPrevHopAddress(), this.nodeAddress);
-        //todo: see if there is something else to do
         sendAcknowledgmentPacket(acknowledgement);
     }
 
@@ -496,6 +501,7 @@ public class ProtocolController {
 
     private void sendAcknowledgmentPacket(ACK acknowledgement) {
         byte[] acknowledgementBytes = acknowledgement.toMessage();
+        acknowledgementBytes = Base64.getEncoder().withoutPadding().encodeToString(acknowledgementBytes).getBytes();
 
         try {
             if (!loraController.sendMessage(acknowledgementBytes)) {

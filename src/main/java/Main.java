@@ -30,7 +30,6 @@ public class Main {
 
         while (true) {
             protocolController.startProtocolController();
-            Thread.sleep(1000);
         }
 
 

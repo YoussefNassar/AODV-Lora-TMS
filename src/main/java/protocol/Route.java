@@ -1,11 +1,12 @@
 package protocol;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Route {
     private byte destinationAddress;
     private byte nextHop;
-    private List<Byte> precursors;
+    private List<Byte> precursors = new ArrayList<>();
     private byte hopCount;  //aka metric
     private byte destinationSequenceNumber;
     private boolean isValid;
