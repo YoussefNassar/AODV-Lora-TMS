@@ -6,6 +6,7 @@ public class RREP extends Message {
     private byte destinationSequence;
     private byte hopCount;
     private byte originatorAddress;
+    private byte padding = 0;
 
     public RREP(byte type_flags, byte hopAddress, byte prevHopAddress, byte requestId, byte destinationAddress,
                 byte destinationSequence, byte hopCount, byte originatorAddress) {
@@ -60,6 +61,6 @@ public class RREP extends Message {
     @Override
     public byte[] toMessage() {
         return new byte[]{getType_flags(), getHopAddress(), getPrevHopAddress(), requestId, destinationAddress
-                , destinationSequence, hopCount, originatorAddress};
+                , destinationSequence, hopCount, originatorAddress, padding};
     }
 }

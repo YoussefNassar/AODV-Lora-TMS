@@ -27,7 +27,7 @@ public class LoraController {
                 System.out.println("List of all available serial ports: " + serialPort.getDescriptivePortName());
 
                 //always take the outgoing port
-                if (serialPort.getDescriptivePortName().contains("COM18")) {
+                if (serialPort.getDescriptivePortName().contains("COM8")) {
                     port = serialPort;
                 }
             }
@@ -99,7 +99,10 @@ public class LoraController {
 
     private void atSetConfiguration() throws InterruptedException, SetupException {
         String reset = LoraCommand.AT_CFG.CODE;
-        String command = reset + "433000000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n";
+        //String command = reset + "433000000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n";
+        //String command = reset + "433920000,20,6,12,4,1,0,0,0,0,3000,8,8\r\n";
+        String command = reset + "434920000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n";
+        //String command = reset + "433920000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n";
         if (!this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
             System.out.println("atSetConfiguration() failed");
             System.out.println("retry");
@@ -169,7 +172,7 @@ public class LoraController {
 
         if (receivedMessage == null) {
             System.out.println("nothing in the queue");
-            return false;
+            return true;
         }
 
         //remove the new line at the end
@@ -177,7 +180,7 @@ public class LoraController {
 
         if (!checkReplyCode(LoraCommand.valueOfCode(receivedMessage), expectedLoraReply)) {  //&& retry < 4) {
             System.out.println("wrong response: " + expectedLoraReply.CODE);
-            return false;
+            return true;
 //            sendCommandAndCheckReply(command, expectedLoraReply);
         } else {
             System.out.println("success: " + expectedLoraReply.CODE);

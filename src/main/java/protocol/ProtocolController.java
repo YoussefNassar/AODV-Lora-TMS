@@ -64,14 +64,14 @@ public class ProtocolController {
 
     private void checkWaitedAcknowledgment() throws InterruptedException {
         if (this.waitingForAcknowledgement && this.acknowledgmentReties < 3 &&
-                (System.currentTimeMillis() - this.startTimeWaitingForAcknowledgment < 120000)) {
+                (System.currentTimeMillis() - this.startTimeWaitingForAcknowledgment > 120000)) {
             this.startTimeWaitingForAcknowledgment = System.currentTimeMillis();
             this.acknowledgmentReties++;
             System.out.println("no acknowledgment yet");
             System.out.println("resend message");
             sendMessagePacket(this.savedMessageForRetries);
         } else if (this.waitingForAcknowledgement && this.acknowledgmentReties == 3 &&
-                (this.startTimeWaitingForAcknowledgment - System.currentTimeMillis() < 120000)) {
+                (System.currentTimeMillis() - this.startTimeWaitingForAcknowledgment > 120000)) {
             System.out.println("message sent 3 times and no acknowledgement was received");
             this.waitingForAcknowledgement = false;
             this.acknowledgmentReties = 0;
@@ -187,9 +187,9 @@ public class ProtocolController {
             return;
         }
 
-        System.out.println("you have 5 seconds to enter your message :");
+        System.out.println("you have 8 seconds to enter your message :");
         long startTime = System.currentTimeMillis();
-        while ((System.currentTimeMillis() - startTime) < 5 * 1000 && !bufferedReader.ready()) {
+        while ((System.currentTimeMillis() - startTime) < 8 * 1000 && !bufferedReader.ready()) {
         }
 
         if (bufferedReader.ready()) {
@@ -264,7 +264,9 @@ public class ProtocolController {
                 decodedBytes = Base64.getDecoder().decode(decodedReceivedMessage);
             }
 
-            switch (decodedBytes[0] & 0xF0) {
+            decodedBytes[0] = (byte) (decodedBytes[0] & 0xF0);
+
+            switch (decodedBytes[0]) {
                 case 0:
                     handleRouteRequest(decodedBytes);
                     break;
@@ -284,7 +286,7 @@ public class ProtocolController {
                     // the message is not valid
                     break;
             }
-        } catch (IllegalArgumentException illegalArgumentException) {
+        } catch (IllegalArgumentException | IndexOutOfBoundsException e) {
             System.out.println("the string cannot be decoded with base64");
         }
     }
@@ -304,9 +306,10 @@ public class ProtocolController {
                     decodedBytes[7], decodedBytes[8], (byte) 0, this.nodeAddress);
             byte[] routeReplyBytes = routeReply.toMessage();
             sendRouteReply(routeReplyBytes);
+            return;
         }
 
-        RREQ routeRequest = new RREQ(decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3],
+        RREQ routeRequest = new RREQ((byte) 0, decodedBytes[1], decodedBytes[2], decodedBytes[3],
                 decodedBytes[4], decodedBytes[5], decodedBytes[6], decodedBytes[7], decodedBytes[8]);
 
         Route route = checkRoutingTable(routeRequest.getDestinationAddress());
@@ -328,7 +331,7 @@ public class ProtocolController {
     private void handleRouteReply(byte[] decodedBytes) {
         // check if route reply is for this node
         if (decodedBytes[4] == this.nodeAddress) {
-            RREP routeReply = new RREP(decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3],
+            RREP routeReply = new RREP((byte) 16, decodedBytes[1], decodedBytes[2], decodedBytes[3],
                     decodedBytes[4], decodedBytes[5], decodedBytes[6], decodedBytes[7]);
             updateRoutingTable(routeReply);
 
@@ -351,6 +354,7 @@ public class ProtocolController {
 
         } else if (decodedBytes[1] == this.nodeAddress) {
             ReverseRoute foundReverseRoute = checkReverseRoutingTable(decodedBytes[4]);
+            System.out.println("hop address  for route reply: " + decodedBytes[1]);
 
             if (foundReverseRoute == null) {
                 System.out.println("no reverse route entry found, discarding message.");
@@ -362,7 +366,7 @@ public class ProtocolController {
             source = originator
             prev hop = prev hop
              */
-            RREP routeReply = new RREP(decodedBytes[0], foundReverseRoute.getPreviousHop(), this.nodeAddress,
+            RREP routeReply = new RREP((byte) 16, foundReverseRoute.getPreviousHop(), this.nodeAddress,
                     decodedBytes[3], decodedBytes[4], decodedBytes[5], (byte) (decodedBytes[6] + 1), decodedBytes[7]);
             updateRoutingTable(routeReply);
             sendRouteReply(routeReply.toMessage());
@@ -378,7 +382,7 @@ public class ProtocolController {
         List<Route> brockenRoutes = new ArrayList<>();
         List<Byte> precursors = new ArrayList<>();
 
-        RERR error = new RERR(decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3]);
+        RERR error = new RERR((byte) 32, decodedBytes[1], decodedBytes[2], decodedBytes[3]);
 
         sendAcknowledgementAfterReceivingRouteError(error);
 
@@ -413,7 +417,7 @@ public class ProtocolController {
 
             String messageString = decodedReceivedMessage.substring(8);
 
-            MSG message = new MSG(decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3], decodedBytes[4],
+            MSG message = new MSG((byte) 48, decodedBytes[1], decodedBytes[2], decodedBytes[3], decodedBytes[4],
                     decodedBytes[5]);
             System.out.println("*******************************************");
             System.out.println("received message:");
@@ -449,7 +453,8 @@ public class ProtocolController {
 
     private void broadCastRouteRequest(RREQ routeRequest) {
         byte[] routeRequestBytes = routeRequest.toMessage();
-        routeRequestBytes = Base64.getEncoder().encodeToString(routeRequestBytes).getBytes();
+        System.out.println("broad casting: "+Base64.getEncoder().withoutPadding().encodeToString(routeRequestBytes));
+        routeRequestBytes = Base64.getEncoder().withoutPadding().encodeToString(routeRequestBytes).getBytes();
 
         try {
             if (!loraController.sendMessage(routeRequestBytes)) {
@@ -461,7 +466,8 @@ public class ProtocolController {
     }
 
     private void sendRouteReply(byte[] routeReplyByte) {
-        routeReplyByte = Base64.getEncoder().encodeToString(routeReplyByte).getBytes();
+        System.out.println(Base64.getEncoder().encodeToString(routeReplyByte));
+        routeReplyByte = Base64.getEncoder().withoutPadding().encodeToString(routeReplyByte).getBytes();
         try {
             loraController.sendMessage(routeReplyByte);
         } catch (InterruptedException e) {
