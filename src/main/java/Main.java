@@ -60,7 +60,7 @@ public class Main {
         error1.addPath(new RoutePath((byte) 21, (byte) 51));
         error1.addPath(new RoutePath((byte) 18, (byte) 10));
 
-        MSG message = new MSG((byte) 48, (byte) 2, (byte) 15, (byte) 4, (byte) 100, (byte) 4, "AODV");
+        MSG message = new MSG((byte) 48, (byte) 2, (byte) 15, (byte) 4, (byte) 100, (byte) 4);
 
         ACK acknowledgement = new ACK((byte) 64, (byte) 3, (byte) 67);
 

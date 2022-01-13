@@ -59,7 +59,13 @@ public class RREQ extends Message {
         this.originatorAddress = originatorAddress;
     }
 
+    public byte getOriginatorSequence() {
+        return originatorSequence;
+    }
 
+    public void setOriginatorSequence(byte originatorSequence) {
+        this.originatorSequence = originatorSequence;
+    }
 
     @Override
     public byte[] toMessage() {

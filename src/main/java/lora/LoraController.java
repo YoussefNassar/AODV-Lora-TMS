@@ -11,7 +11,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class LoraController {
 
-    public static Queue<String> receivedMessage = new LinkedList(); //todo: read about raw type (the warning)
+    public static Queue<String> receivedMessage = new LinkedList<>();
     public static OutputStream portOutputStream;
     private static SerialPort port;
 
@@ -165,7 +165,6 @@ public class LoraController {
             e.printStackTrace();
         }
         Thread.sleep(4000);
-        //todo: recheck this logic
         String receivedMessage = LoraController.receivedMessage.poll();
 
         if (receivedMessage == null) {
@@ -210,10 +209,9 @@ public class LoraController {
 
         if (receivedMessage == null) {
             System.out.println("nothing in the queue");
-            return false;
+            return true;
         }
 
-        //todo : check if you need to check
         return true;
     }
 

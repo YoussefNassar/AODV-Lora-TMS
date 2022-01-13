@@ -7,6 +7,7 @@ import protocol.message.MSG;
 import protocol.message.RERR;
 import protocol.message.RREP;
 import protocol.message.RREQ;
+import utilities.TwosComplementUtility;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -22,7 +23,7 @@ public class ProtocolController {
 
     LoraController loraController;
     byte nodeAddress = 7;
-    private byte sequenceNumber = 1;
+    private byte sequenceNumber = 0;
     private byte requestId = 0;
     private List<Route> routingTable = new ArrayList<>();
     private List<ReverseRoute> reverseRoutingTable = new ArrayList<>();
@@ -39,8 +40,6 @@ public class ProtocolController {
 
     Map<Integer, Integer> routesRequestEchoCheck = new HashMap<>();
     Map<Integer, Integer> MessageEchoCheck = new HashMap<>();
-
-
 
     BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
     private String savedMessageAfterRouteRequest;
@@ -65,7 +64,7 @@ public class ProtocolController {
 
     private void checkWaitedAcknowledgment() throws InterruptedException {
         if (this.waitingForAcknowledgement && this.acknowledgmentReties < 3 &&
-                (this.startTimeWaitingForAcknowledgment - System.currentTimeMillis() < 120000)) {
+                (System.currentTimeMillis() - this.startTimeWaitingForAcknowledgment < 120000)) {
             this.startTimeWaitingForAcknowledgment = System.currentTimeMillis();
             this.acknowledgmentReties++;
             System.out.println("no acknowledgment yet");
@@ -73,7 +72,7 @@ public class ProtocolController {
             sendMessagePacket(this.savedMessageForRetries);
         } else if (this.waitingForAcknowledgement && this.acknowledgmentReties == 3 &&
                 (this.startTimeWaitingForAcknowledgment - System.currentTimeMillis() < 120000)) {
-            System.out.println("send message 3 times and no acknowledgement was received");
+            System.out.println("message sent 3 times and no acknowledgement was received");
             this.waitingForAcknowledgement = false;
             this.acknowledgmentReties = 0;
             //start route errors
@@ -132,7 +131,7 @@ public class ProtocolController {
 
     private void checkWaitedRouteReply() {
         if (this.waitingForRouteReply && this.routeRequestRetries < 3 &&
-                (this.startTimeWaitingForRouteResponse - System.currentTimeMillis() < 300000)) {
+                (System.currentTimeMillis() - this.startTimeWaitingForRouteResponse > 300000)) {
             this.startTimeWaitingForRouteResponse = System.currentTimeMillis();
             this.routeRequestRetries++;
             System.out.println("no route response yet");
@@ -140,7 +139,7 @@ public class ProtocolController {
             this.requestId++;
             this.sequenceNumber++;
             this.savedRouteRequestForRetries.setRequestId(this.requestId);
-            this.savedRouteRequestForRetries.setDestinationSequence(this.sequenceNumber);
+            this.savedRouteRequestForRetries.setOriginatorSequence(this.sequenceNumber);
             broadCastRouteRequest(this.savedRouteRequestForRetries);
         } else if (this.waitingForRouteReply && this.routeRequestRetries == 3) {
             System.out.println("send route request 3 times and no route response was received");
@@ -204,8 +203,10 @@ public class ProtocolController {
 
         if (route == null || !route.isValid()) {
             //no route found in the routing table, creating a route request...
-            RREQ routeRequest = new RREQ((byte) 0, (byte) 255, this.nodeAddress, ++this.requestId,
-                    (byte) destinationAddress, (byte) 0, (byte) 0, this.nodeAddress, ++this.sequenceNumber);
+            this.requestId += 1;
+            this.sequenceNumber += 1;
+            RREQ routeRequest = new RREQ((byte) 0, (byte) 255, this.nodeAddress, this.requestId,
+                    (byte) destinationAddress, (byte) 0, (byte) 0, this.nodeAddress, this.sequenceNumber);
             broadCastRouteRequest(routeRequest);
             //wait for route reply
             this.waitingForRouteReply = true;
@@ -214,8 +215,9 @@ public class ProtocolController {
             this.savedMessageAfterRouteRequest = message;
         } else {
             MSG messagePacket = new MSG((byte) 48, route.getNextHop(), this.nodeAddress, (byte) destinationAddress,
-                    this.nodeAddress, route.getHopCount(), message);
+                    this.nodeAddress, route.getHopCount());
             String decodedMessage = Base64.getEncoder().withoutPadding().encodeToString(messagePacket.toMessage());
+            decodedMessage = decodedMessage + message;
             byte[] messageBytes = decodedMessage.getBytes();
 
             try {
@@ -252,27 +254,30 @@ public class ProtocolController {
 
     private void analyseMessage(String decodedReceivedMessage) {
         try {
-            byte[] decodedBytes = Base64.getDecoder().decode(decodedReceivedMessage);
+            byte[] decodedBytes;
 
-            switch (decodedBytes[0]) {
+            //check if it is a message packet
+            String firstTwoChars = decodedReceivedMessage.substring(0, 2);
+            if (firstTwoChars.equals("MA")) {
+                decodedBytes = Base64.getDecoder().decode(decodedReceivedMessage.substring(0, 8));
+            } else {
+                decodedBytes = Base64.getDecoder().decode(decodedReceivedMessage);
+            }
+
+            switch (decodedBytes[0] & 0xF0) {
                 case 0:
-                    //route request
                     handleRouteRequest(decodedBytes);
                     break;
                 case 16:
-                    //route reply
                     handleRouteReply(decodedBytes);
                     break;
                 case 32:
-                    //route error
                     handleRouteError(decodedBytes);
                     break;
                 case 48:
-                    //message
                     handleMessage(decodedBytes, decodedReceivedMessage);
                     break;
                 case 64:
-                    //acknowledgement
                     handleAcknowledgement(decodedBytes);
                     break;
                 default:
@@ -294,9 +299,9 @@ public class ProtocolController {
 
         //check if this node is the destination
         if (decodedBytes[4] == this.nodeAddress) {
-            System.out.println("this node is the destination, sending route reply");
+            System.out.println("this node is the destination for a route request, sending route reply");
             RREP routeReply = new RREP((byte) 16, decodedBytes[2], this.nodeAddress, decodedBytes[3],
-                    decodedBytes[7], decodedBytes[5], (byte) 0, this.nodeAddress);
+                    decodedBytes[7], decodedBytes[8], (byte) 0, this.nodeAddress);
             byte[] routeReplyBytes = routeReply.toMessage();
             sendRouteReply(routeReplyBytes);
         }
@@ -314,7 +319,7 @@ public class ProtocolController {
             broadCastRouteRequest(routeRequest);
         } else {
             RREP routeReply = new RREP((byte) 16, routeRequest.getPrevHopAddress(), this.nodeAddress, decodedBytes[3],
-                    routeRequest.getOriginatorAddress(), routeRequest.getDestinationSequence(), route.getHopCount(),
+                    routeRequest.getOriginatorAddress(), routeRequest.getOriginatorSequence(), route.getHopCount(),
                     route.getDestinationAddress());
             sendRouteReply(routeReply.toMessage());
         }
@@ -333,7 +338,7 @@ public class ProtocolController {
             String message = this.savedMessageAfterRouteRequest;
 
             MSG messagePacket = new MSG((byte) 48, route.getNextHop(), this.nodeAddress, route.getDestinationAddress(),
-                    this.nodeAddress, route.getHopCount(), message);
+                    this.nodeAddress, route.getHopCount());
             byte[] messagePacketBytes = (Base64.getEncoder().withoutPadding().encodeToString(messagePacket.toMessage())
                     + message).getBytes();
 
@@ -352,6 +357,11 @@ public class ProtocolController {
                 return;
             }
 
+            /*
+            when saving to reverse route from route request:the destination = destination
+            source = originator
+            prev hop = prev hop
+             */
             RREP routeReply = new RREP(decodedBytes[0], foundReverseRoute.getPreviousHop(), this.nodeAddress,
                     decodedBytes[3], decodedBytes[4], decodedBytes[5], (byte) (decodedBytes[6] + 1), decodedBytes[7]);
             updateRoutingTable(routeReply);
@@ -404,7 +414,7 @@ public class ProtocolController {
             String messageString = decodedReceivedMessage.substring(8);
 
             MSG message = new MSG(decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3], decodedBytes[4],
-                    decodedBytes[5], messageString);
+                    decodedBytes[5]);
             System.out.println("*******************************************");
             System.out.println("received message:");
             System.out.println(messageString);
@@ -417,7 +427,7 @@ public class ProtocolController {
 
     private Route checkRoutingTable(byte destinationAddress) {
         return routingTable.stream()
-                .filter(route -> route.getDestinationAddress() == destinationAddress)
+                .filter(route -> route.getDestinationAddress() == destinationAddress && route.isValid())
                 .findAny()
                 .orElse(null);
     }
@@ -469,7 +479,15 @@ public class ProtocolController {
             route.getPrecursors().add(routeReply.getPrevHopAddress());
             routingTable.add(route);
         } else {
-            // todo: check if the route is better or newer
+            //todo: check if checking the sequence number is right
+            if (!(route1.isValid() || routeReply.getHopCount() < route1.getHopCount() ||
+                    TwosComplementUtility.isNewer(routeReply.getDestinationSequence(), route1.getDestinationSequenceNumber()))) {
+                route1.setValid(false);
+                Route route = new Route(routeReply.getOriginatorAddress(), routeReply.getPrevHopAddress(),
+                        routeReply.getHopCount(), routeReply.getDestinationSequence(), true);
+                route.getPrecursors().add(routeReply.getPrevHopAddress());
+                routingTable.add(route);
+            }
         }
 
     }
