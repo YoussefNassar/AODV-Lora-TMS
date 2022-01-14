@@ -70,6 +70,6 @@ public class RREQ extends Message {
     @Override
     public byte[] toMessage() {
         return new byte[]{getType_flags(), getHopAddress(), getPrevHopAddress(), requestId, destinationAddress
-                , destinationSequence, hopCount, originatorAddress};
+                , destinationSequence, hopCount, originatorAddress, originatorSequence};
     }
 }
