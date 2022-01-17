@@ -1,5 +1,6 @@
 package lora;
 
+import TCPConnection.TCPConnection;
 import com.fazecast.jSerialComm.SerialPort;
 import lora.exception.SetupException;
 
@@ -14,6 +15,8 @@ public class LoraController {
     public static Queue<String> receivedMessage = new LinkedList<>();
     public static OutputStream portOutputStream;
     private static SerialPort port;
+
+    TCPConnection tcpConnection;
 
     String command = "";
 
@@ -50,6 +53,12 @@ public class LoraController {
         port.addDataListener(listener);
     }
 
+    public void setTCPConnection() {
+        tcpConnection = new TCPConnection();
+        tcpConnection.setUpTCPConnection();
+        portOutputStream = tcpConnection.getPortOutputStream();
+    }
+
     public void setUpTheModule() throws InterruptedException {
         try {
             testAt();
@@ -57,8 +66,7 @@ public class LoraController {
             atSetConfiguration();
             sendRandomMessage();
         } catch (SetupException e) {
-            System.out.println("setup module failed");
-            System.exit(0);
+            System.out.println("SetupException was thrown");
         }
         System.out.println("setup completed");
     }
@@ -100,8 +108,8 @@ public class LoraController {
     private void atSetConfiguration() throws InterruptedException, SetupException {
         String reset = LoraCommand.AT_CFG.CODE;
         //String command = reset + "433000000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n";
-        //String command = reset + "433920000,20,6,12,4,1,0,0,0,0,3000,8,8\r\n";
-        String command = reset + "434920000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n";
+        String command = reset + "433920000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n";
+        //String command = reset + "434920000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n"; the last i used
         //String command = reset + "433920000,5,6,12,4,1,0,0,0,0,3000,8,8\r\n";
         if (!this.sendCommandAndCheckReply(command, LoraCommand.REPLY_OK) && retry < 4) {
             System.out.println("atSetConfiguration() failed");
@@ -175,17 +183,19 @@ public class LoraController {
             return true;
         }
 
-        //remove the new line at the end
-        receivedMessage = receivedMessage.substring(0, receivedMessage.length()-2);
+        return true;
 
-        if (!checkReplyCode(LoraCommand.valueOfCode(receivedMessage), expectedLoraReply)) {  //&& retry < 4) {
-            System.out.println("wrong response: " + expectedLoraReply.CODE);
-            return true;
-//            sendCommandAndCheckReply(command, expectedLoraReply);
-        } else {
-            System.out.println("success: " + expectedLoraReply.CODE);
-            return true;
-        }
+//        //remove the new line at the end
+//        receivedMessage = receivedMessage.substring(0, receivedMessage.length()-2);
+//
+//        if (!checkReplyCode(LoraCommand.valueOfCode(receivedMessage), expectedLoraReply)) {  //&& retry < 4) {
+//            System.out.println("wrong response: " + expectedLoraReply.CODE);
+//            return true;
+////            sendCommandAndCheckReply(command, expectedLoraReply);
+//        } else {
+//            System.out.println("success: " + expectedLoraReply.CODE);
+//            return true;
+//        }
     }
 
     private boolean checkReplyCode(LoraCommand actualReplyCode, LoraCommand expectedReplyCode) {
@@ -200,15 +210,17 @@ public class LoraController {
             Thread.sleep(ThreadLocalRandom.current().nextInt(3000, 6000 + 1));
             portOutputStream.write(commandByte);
             portOutputStream.flush();
-            Thread.sleep(4000);
+            Thread.sleep(3000);
             portOutputStream.write(messageBytes);
             portOutputStream.flush();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
-        Thread.sleep(4000);
+        Thread.sleep(3000);
 
-        String receivedMessage = LoraController.receivedMessage.poll();
+        //tcpConnection.sendMessage(messageBytes);
+
+        //String receivedMessage = LoraController.receivedMessage.poll();
 
         if (receivedMessage == null) {
             System.out.println("nothing in the queue");

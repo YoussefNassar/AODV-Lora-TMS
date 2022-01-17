@@ -26,24 +26,12 @@ public class Main {
         LoraController loraController = new LoraController();
         ProtocolController protocolController = new ProtocolController(loraController);
         loraController.setUpBluetoothConnection();
+        //loraController.setTCPConnection();
         loraController.setUpTheModule();
 
         while (true) {
             protocolController.startProtocolController();
         }
-
-
-//        while (true) {
-//            System.out.println("enter your command: ");
-//            Scanner scanner = new Scanner(System.in);
-//            //String command = scanner.nextLine();
-//            //command = command.toUpperCase();
-//
-//            LoraController loraController = new LoraController();
-//            loraController.setUpCommunication();
-//            loraController.setUpTheModule();
-//            //loraController.testConnectionInLab();
-//        }
     }
 
     public void testEncoding() {
