@@ -19,7 +19,7 @@ public class TCPConnection {
 
     public TCPConnection() {
         try {
-            socket = new Socket("87.122.105.30", 45400);
+            socket = new Socket("87.123.155.102", 45400);
             String adresse = "A5\r\n";
             socket.getOutputStream().write(adresse.getBytes(StandardCharsets.US_ASCII));
             portOutputStream = new ByteArrayOutputStream();
