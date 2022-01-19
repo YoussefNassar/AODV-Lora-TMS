@@ -38,8 +38,7 @@ public class ProtocolController {
     private long startTimeWaitingForRouteResponse;
     private RREQ savedRouteRequestForRetries;
 
-    Map<Integer, Integer> routesRequestEchoCheck = new HashMap<>();
-    Map<Integer, Integer> MessageEchoCheck = new HashMap<>();
+    Map<Byte, Byte> routesRequestEchoCheck = new HashMap<>();
 
     BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
     private String savedMessageAfterRouteRequest;
@@ -69,7 +68,7 @@ public class ProtocolController {
             this.acknowledgmentReties++;
             System.out.println("no acknowledgment yet");
             System.out.println("resend message");
-            sendMessagePacket(this.savedMessageForRetries,true);
+            sendMessagePacket(this.savedMessageForRetries, true);
         } else if (this.waitingForAcknowledgement && this.acknowledgmentReties == 3 &&
                 (System.currentTimeMillis() - this.startTimeWaitingForAcknowledgment > 120000)) {
             System.out.println("message sent 3 times and no acknowledgement was received");
@@ -208,6 +207,7 @@ public class ProtocolController {
             RREQ routeRequest = new RREQ((byte) 0, (byte) 255, this.nodeAddress, this.requestId,
                     (byte) destinationAddress, (byte) 0, (byte) 0, this.nodeAddress, this.sequenceNumber);
             broadCastRouteRequest(routeRequest);
+            routesRequestEchoCheck.put(routeRequest.getRequestId(), routeRequest.getOriginatorAddress());
             //wait for route reply
             this.waitingForRouteReply = true;
             this.startTimeWaitingForRouteResponse = System.currentTimeMillis();
@@ -296,13 +296,16 @@ public class ProtocolController {
     }
 
     private void handleRouteRequest(byte[] decodedBytes) {
-        updateRoutingTableFromRouteRequest(decodedBytes);
-
-        //todo: this need to be checked against the protocol
-        if (decodedBytes[2] == this.nodeAddress) {
+        //check for route request echos
+        byte originatorAddress = decodedBytes[7];
+        byte requestId = decodedBytes[3];
+        Byte originatorAddressEchoCheck = routesRequestEchoCheck.get(requestId);
+        if (originatorAddressEchoCheck != null && originatorAddress == originatorAddressEchoCheck) {
             System.out.println("route request package is an echo, return...");
             return;
         }
+
+        updateRoutingTableFromRouteRequest(decodedBytes);
 
         //check if this node is the destination
         if (decodedBytes[4] == this.nodeAddress) {
@@ -325,6 +328,7 @@ public class ProtocolController {
             routeRequest.setHopCount((byte) (routeRequest.getHopCount() + 1));  //increase hop count
             routeRequest.setPrevHopAddress(this.nodeAddress);
             broadCastRouteRequest(routeRequest);
+            routesRequestEchoCheck.put(routeRequest.getRequestId(), routeRequest.getOriginatorAddress());
         } else {
             RREP routeReply = new RREP((byte) 16, routeRequest.getPrevHopAddress(), this.nodeAddress, decodedBytes[3],
                     routeRequest.getOriginatorAddress(), routeRequest.getOriginatorSequence(), route.getHopCount(),
@@ -337,12 +341,12 @@ public class ProtocolController {
         Route route = checkRoutingTable(decodedBytes[4]);
         if (route == null) {
             if (decodedBytes[7] == decodedBytes[2]) {
-                Route route1 = new Route(decodedBytes[7], decodedBytes[7], (byte) 0, this.sequenceNumber,true);
+                Route route1 = new Route(decodedBytes[7], decodedBytes[7], (byte) 0, this.sequenceNumber, true);
                 route1.getPrecursors().add(decodedBytes[2]);
                 this.routingTable.add(route1);
             } else {
                 Route route1 = new Route(decodedBytes[7], decodedBytes[2], (byte) (decodedBytes[1] + 1),
-                        this.sequenceNumber,true);
+                        this.sequenceNumber, true);
                 route1.getPrecursors().add(decodedBytes[2]);
                 this.routingTable.add(route1);
             }
@@ -367,7 +371,7 @@ public class ProtocolController {
                     + message).getBytes();
 
             try {
-                sendMessagePacket(messagePacketBytes,true);
+                sendMessagePacket(messagePacketBytes, true);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -439,6 +443,10 @@ public class ProtocolController {
 
     private void handleMessage(byte[] decodedBytes, String decodedReceivedMessage) {
         String messageString = decodedReceivedMessage.substring(8);
+
+        if (decodedBytes[1] != this.nodeAddress) {
+            return;
+        }
 
         if (decodedBytes[3] == this.nodeAddress) {
             MSG message = new MSG((byte) 48, decodedBytes[1], decodedBytes[2], decodedBytes[3], decodedBytes[4],
@@ -519,8 +527,6 @@ public class ProtocolController {
             e.printStackTrace();
         }
     }
-
-    //todo: check the parameter of the route
 
     private void updateRoutingTable(@NotNull RREP routeReply) {
         Route route1 = checkRoutingTable(routeReply.getOriginatorAddress());
